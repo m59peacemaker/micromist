@@ -29,8 +29,10 @@ const findValueInFlag = flag => {
   return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
+const onlyTheValuesThatShouldBeReturned = ({ opts, pos, rest}) => ({ opts, pos, rest})
+
 const parse = (args, options = {}) => {
-  return reduce(args, ({ opts, pos, rest }) => {
+  return onlyTheValuesThatShouldBeReturned(reduce(args, ({ opts, pos, rest }) => {
     const [ head, ...tail ] = rest
 
 
@@ -39,7 +41,7 @@ const parse = (args, options = {}) => {
         return {
           opts,
           pos,
-          rest: [ head, ...rest ],
+          rest: [ head, ...tail ],
           stop: true
         }
       } else {
@@ -74,7 +76,7 @@ const parse = (args, options = {}) => {
         }
       }
     }
-  }, { opts: [], pos: [], rest: args })
+  }, { opts: [], pos: [], rest: args }))
 }
 
 module.exports = parse
