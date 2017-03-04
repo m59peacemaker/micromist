@@ -8,7 +8,7 @@ const iterate = (fn, acc, args) => {
   const skip = () => ++i
   const stop = () => (i = args.length)
   for (; i < args.length; ++i) {
-    acc = fn(acc, args[i], args[i + 1], args.slice(i + 2), skip)
+    acc = fn(acc, args[i], args[i + 1], args.slice(i + 1), skip, stop)
   }
   return acc
 }
@@ -31,10 +31,15 @@ const findValueInFlag = flag => {
   return rest.length ? [key, rest.join('=')] : [key]
 }
 
-const parse = (args) => {
+const parse = (args, options = {}) => {
   return iterate((acc, a, b, rest, skip, stop) => {
     if (isPositional(a)) {
-      acc.pos.push(a)
+      if (options.stopEarly) {
+        acc.rest = [a].concat(rest)
+        stop()
+      } else {
+        acc.pos.push(a)
+      }
     } else {
       const [justFlags, lastFlag] = splitFlags(a)
       const [flag, flagValue] = findValueInFlag(lastFlag)

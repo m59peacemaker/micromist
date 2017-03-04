@@ -35,11 +35,22 @@ const parse = require('./')
     'simple combined short flags',
     ['-cats', '-dogs'],
     {opts: ['-c', '-a', '-t', '-s', '-d', '-o', '-g', '-s'], pos: [], rest: []}
+  ],
+  [
+    'stopEarly options stops at first positional arg',
+    [['-ab', '--foo', '--bar=baz', 'qux'], {stopEarly: true}],
+    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux']}
+  ],
+  [
+    'stopEarly test with more stuff',
+    [['-ab', '--foo', '--bar=baz', 'qux', '--hey', '--sup'], {stopEarly: true}],
+    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux', '--hey', '--sup']}
   ]
 ].forEach(([name, args, expected, only]) => {
   const tFn = only ? test.only : test
-  tFn(`${name} | ${args.join(' ')}`, t => {
-    t.deepEqual(parse(args), expected)
+  args = Array.isArray(args[0]) ? args : [args]
+  tFn(`${name} | ${args[0].join(' ')}`, t => {
+    t.deepEqual(parse(...args), expected)
     t.end()
   })
 })
