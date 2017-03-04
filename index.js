@@ -3,12 +3,10 @@ const isLongFlag = v => /^--/.test(v)
 const isFlag = v => isShortFlag(v) || isLongFlag(v)
 const isPositional = v => !isFlag(v)
 
-const iterate = (fn, acc, args) => {
-  let i = 0
-  const skip = () => ++i
-  const stop = () => (i = args.length)
-  for (; i < args.length; ++i) {
-    acc = fn(acc, args[i], args[i + 1], args.slice(i + 2), skip)
+const reduce = (ary, fn, initial) => {
+  let acc = initial
+  while (acc.rest && acc.rest.length > 0) {
+    acc = fn(acc)
   }
   return acc
 }
@@ -20,36 +18,54 @@ const stripHyphens = flag => flag.replace(/^--?/, '')
 const splitShortFlags = flag => stripHyphens(flag).split('').map(v => '-' + v)
 
 const splitFlags = flag => {
-  const flags = isShortFlag(flag) ? splitShortFlags(flag) : [flag]
-  return [flags.slice(0, -1), flags.pop()]
+  const flags = isShortFlag(flag) ? splitShortFlags(flag) : [ flag ]
+  return [ flags.slice(0, -1), flags.pop() ]
 }
 
 // '--foo=bar' -> ['--foo', 'bar']
 // '--foo'     -> ['--foo']
 const findValueInFlag = flag => {
-  const [key, ...rest] = flag.split('=')
-  return rest.length ? [key, rest.join('=')] : [key]
+  const [ key, ...rest ] = flag.split('=')
+  return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
 const parse = (args) => {
-  return iterate((acc, a, b, rest, skip, stop) => {
-    if (isPositional(a)) {
-      acc.pos.push(a)
+  return reduce(args, ({ opts, pos, rest }) => {
+    const [ head, ...tail ] = rest
+
+
+    if (isPositional(head)) {
+      return {
+        opts,
+        rest: tail,
+        pos: [ ...pos, head ]
+      }
     } else {
-      const [justFlags, lastFlag] = splitFlags(a)
-      const [flag, flagValue] = findValueInFlag(lastFlag)
-      acc.opts = acc.opts.concat(justFlags)
+      const [ justFlags, lastFlag ] = splitFlags(head)
+      const [ flag, flagValue ] = findValueInFlag(lastFlag)
+      const optsWithFlags = [ ...opts, ...justFlags ]
       if (flagValue !== undefined) {
-        acc.opts.push([flag, flagValue])
-      } else if (isFlag(b) || b === undefined) {
-        acc.opts.push(flag)
+        return {
+          pos,
+          rest: tail,
+          opts: [ ...optsWithFlags, [ flag, flagValue ] ]
+        }
+      } else if (tail.length === 0 || isFlag(tail[0])) {
+        return {
+          pos,
+          rest: tail,
+          opts: [ ...optsWithFlags, flag ]
+        }
       } else {
-        acc.opts.push([flag, b])
-        skip()
+        const [ b, ...newTail ] = tail
+        return {
+          pos,
+          rest: newTail,
+          opts: [ ...optsWithFlags, [ flag, b ] ]
+        }
       }
     }
-    return acc
-  }, {opts: [], pos: [], rest: []}, args)
+  }, { opts: [], pos: [], rest: args })
 }
 
 module.exports = parse
