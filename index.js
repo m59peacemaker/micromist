@@ -5,7 +5,7 @@ const isPositional = v => !isFlag(v)
 
 const reduce = (ary, fn, initial) => {
   let acc = initial
-  while (acc.rest && acc.rest.length > 0) {
+  while (!acc.stop && acc.rest.length > 0) {
     acc = fn(acc)
   }
   return acc
@@ -29,16 +29,25 @@ const findValueInFlag = flag => {
   return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
-const parse = (args) => {
+const parse = (args, options = {}) => {
   return reduce(args, ({ opts, pos, rest }) => {
     const [ head, ...tail ] = rest
 
 
     if (isPositional(head)) {
-      return {
-        opts,
-        rest: tail,
-        pos: [ ...pos, head ]
+      if (options.stopEarly) {
+        return {
+          opts,
+          pos,
+          rest: [ head, ...rest ],
+          stop: true
+        }
+      } else {
+        return {
+          opts,
+          rest: tail,
+          pos: [ ...pos, head ]
+        }
       }
     } else {
       const [ justFlags, lastFlag ] = splitFlags(head)
