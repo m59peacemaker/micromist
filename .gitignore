@@ -1,0 +1,9 @@
+/node_modules
+/bower_components
+/vendor
+/temp
+/tmp
+/plugins
+/platforms
+*.log
+*.tmp
