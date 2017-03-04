@@ -32,6 +32,8 @@ const findValueInFlag = flag => {
 const onlyTheValuesThatShouldBeReturned = ({ opts, pos, rest}) => ({ opts, pos, rest})
 
 const parse = (args, options = {}) => {
+  const isFlagOnly = chunk => options.flagOnly && options.flagOnly.includes(chunk)
+
   return onlyTheValuesThatShouldBeReturned(reduce(args, ({ opts, pos, rest }) => {
     const [ head, ...tail ] = rest
 
@@ -61,7 +63,7 @@ const parse = (args, options = {}) => {
           rest: tail,
           opts: [ ...optsWithFlags, [ flag, flagValue ] ]
         }
-      } else if (tail.length === 0 || isFlag(tail[0])) {
+      } else if (isFlagOnly(flag) || tail.length === 0 || isFlag(tail[0])) {
         return {
           pos,
           rest: tail,
