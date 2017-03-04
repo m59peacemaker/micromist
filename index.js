@@ -29,7 +29,7 @@ const findValueInFlag = flag => {
   return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
-const onlyTheValuesThatShouldBeReturned = ({ opts, pos, rest}) => ({ opts, pos, rest})
+const onlyTheValuesThatShouldBeReturned = ({ opts, pos, rest }) => ({ opts, pos, rest })
 
 const parse = (args, options = {}) => {
   const isFlagOnly = chunk => options.flagOnly && options.flagOnly.includes(chunk)
