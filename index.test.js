@@ -37,14 +37,23 @@ const parse = require('./')
     {opts: ['-c', '-a', '-t', '-s', '-d', '-o', '-g', '-s'], pos: [], rest: []}
   ],
   [
-    'stopEarly options stops at first positional arg',
+    'options.stopEarly options stops at first positional arg',
     [['-ab', '--foo', '--bar=baz', 'qux'], {stopEarly: true}],
     {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux']}
   ],
   [
-    'stopEarly test with more stuff',
+    'options.stopEarly test with more stuff',
     [['-ab', '--foo', '--bar=baz', 'qux', '--hey', '--sup'], {stopEarly: true}],
     {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux', '--hey', '--sup']}
+  ],
+  [
+    'options.flagOnly',
+    [['-ab', '--foo', 'bar', '--cat', 'dog', '--bar=baz', '-a', 'qux'], {flagOnly: ['-a', '--foo']}],
+    {
+      opts: ['-a', '-b', '--foo', ['--cat', 'dog'], ['--bar', 'baz'], '-a'],
+      pos: ['bar', 'qux'],
+      rest: []
+    }
   ]
 ].forEach(([name, args, expected, only]) => {
   const tFn = only ? test.only : test
