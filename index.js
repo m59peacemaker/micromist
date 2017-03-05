@@ -29,6 +29,15 @@ const findValueInFlag = flag => {
   return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
+const prepare = (options, result) => {
+  const keys = ['opts', options.stopEarly ? 'rest' : 'pos']
+  options['--'] && keys.push('--')
+  return keys.reduce((acc, v) => {
+    acc[v] = result[v] || []
+    return acc
+  }, {})
+}
+
 const parse = (args, options = {}) => {
   const isFlagOnly = chunk => options.flagOnly && options.flagOnly.includes(chunk)
   const isEndMarker = v => options['--'] && v === '--'
@@ -39,14 +48,14 @@ const parse = (args, options = {}) => {
     isEndMarker(tail[0])
   )
 
-  return reduce(({ opts, pos }, remaining) => {
+  const result = reduce(({ opts, pos }, remaining) => {
     const [ head, ...tail ] = remaining
 
     if (isEndMarker(head)) {
       return [ { opts, pos, '--': tail } ]
     } else if (isPositional(head)) {
       if (options.stopEarly) {
-        return [ { opts, pos, rest: [ head, ...tail ] } ]
+        return [ { opts, rest: [ head, ...tail ] } ]
       } else {
         return [
           { opts, pos: [ ...pos, head ] },
@@ -75,7 +84,9 @@ const parse = (args, options = {}) => {
         ]
       }
     }
-  }, { opts: [], pos: [] }, args)
+  }, { opts: [], pos: [], rest: [], '--': [] }, args)
+
+  return prepare(options, result)
 }
 
 module.exports = parse

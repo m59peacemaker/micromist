@@ -48,12 +48,12 @@ const parse = require('./')
   [
     'options.stopEarly options stops at first positional arg',
     [['-ab', '--foo', '--bar=baz', 'qux'], {stopEarly: true}],
-    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux']}
+    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], rest: ['qux']}
   ],
   [
     'options.stopEarly test with more stuff',
     [['-ab', '--foo', '--bar=baz', 'qux', '--hey', '--sup'], {stopEarly: true}],
-    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], pos: [], rest: ['qux', '--hey', '--sup']}
+    {opts: ['-a', '-b', '--foo', ['--bar', 'baz']], rest: ['qux', '--hey', '--sup']}
   ],
   [
     'options.flagOnly',
@@ -82,6 +82,16 @@ const parse = require('./')
     `"options['--']" stops on -- and collects what follows`,
     [['-a', '--bar', '--', '-c', 'def'], {'--': true}],
     {opts: ['-a', '--bar'], pos: [], '--': ['-c', 'def']}
+  ],
+  [
+    'stopEarly and --',
+    [['-c', 'at', '--', 'moar'], {stopEarly: true, '--': true}],
+    {opts: [['-c', 'at']], rest: [], '--': ['moar']}
+  ],
+  [
+    'stopEarly and --',
+    [['-c', 'at', 'stop', '--', 'moar'], {stopEarly: true, '--': true}],
+    {opts: [['-c', 'at']], rest: ['stop', '--', 'moar'], '--': []}
   ],
   [
     'line breaks',
