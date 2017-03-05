@@ -5,36 +5,45 @@ const parse = require('./')
   [
     'basic "--arg value" pairs',
     ['--foo', 'bar', '--baz', 'qux'],
-    {opts: [['--foo', 'bar'], ['--baz', 'qux']], pos: [], rest: []}
+    {opts: [['--foo', 'bar'], ['--baz', 'qux']], pos: []}
   ],
   [
     'basic "-a value" pairs',
     ['-f', 'bar', '-b', 'qux'],
-    {opts: [['-f', 'bar'], ['-b', 'qux']], pos: [], rest: []}
+    {opts: [['-f', 'bar'], ['-b', 'qux']], pos: []}
   ],
   [
     'basic "--arg=value" options',
     ['--foo=bar', '--baz=qux'],
-    {opts: [['--foo', 'bar'], ['--baz', 'qux']], pos: [], rest: []}
+    {opts: [['--foo', 'bar'], ['--baz', 'qux']], pos: []}
+  ],
+  [
+    'basic "-a=value" options',
+    ['-f=bar', '-b=qux'],
+    {opts: [['-f', 'bar'], ['-b', 'qux']], pos: []}
+  ],
+  [
+    '"-abc=value" options',
+    ['-wow=dud', 'foo'],
+    {opts: ['-w', '-o', ['-w', 'dud']], pos: ['foo']}
   ],
   [
     'all positional',
     ['foo', 'bar', 'baz'],
-    {opts: [], pos: ['foo', 'bar', 'baz'],  rest: []}
+    {opts: [], pos: ['foo', 'bar', 'baz']}
   ],
   [
     'pairs and positional',
     ['-a', 'aa', 'foo', 'bar', '--bar', 'bb', 'baz', '--c=d', 'qux'],
     {
       opts: [['-a', 'aa'], ['--bar', 'bb'], ['--c', 'd']],
-      pos: ['foo', 'bar', 'baz', 'qux'],
-      rest: []
+      pos: ['foo', 'bar', 'baz', 'qux']
     }
   ],
   [
     'simple combined short flags',
     ['-cats', '-dogs'],
-    {opts: ['-c', '-a', '-t', '-s', '-d', '-o', '-g', '-s'], pos: [], rest: []}
+    {opts: ['-c', '-a', '-t', '-s', '-d', '-o', '-g', '-s'], pos: []}
   ],
   [
     'options.stopEarly options stops at first positional arg',
@@ -51,9 +60,33 @@ const parse = require('./')
     [['-ab', '--foo', 'bar', '--cat', 'dog', '--bar=baz', '-a', 'qux'], {flagOnly: ['-a', '--foo']}],
     {
       opts: ['-a', '-b', '--foo', ['--cat', 'dog'], ['--bar', 'baz'], '-a'],
-      pos: ['bar', 'qux'],
-      rest: []
+      pos: ['bar', 'qux']
     }
+  ],
+  [
+    '"--arg=value" when "--arg" is flagOnly, value is ignored',
+    [['--arg=value', 'foo', '-a=b'], {flagOnly: ['--arg', '-a']}],
+    {opts: ['--arg', '-a'], pos: ['foo']}
+  ],
+  [
+    'treats - as a value',
+    ['-bar', '-', '-c'],
+    {opts: ['-b', '-a', ['-r', '-'], '-c'], pos: []}
+  ],
+  [
+    'treats -- as a value by default',
+    ['-a', '--bar', '--', '-c', 'def'],
+    {opts: ['-a', ['--bar', '--'], ['-c', 'def']], pos: []}
+  ],
+  [
+    `"options['--']" stops on -- and collects what follows`,
+    [['-a', '--bar', '--', '-c', 'def'], {'--': true}],
+    {opts: ['-a', '--bar'], pos: [], '--': ['-c', 'def']}
+  ],
+  [
+    'line breaks',
+    ['--foo=bar\nb az', '-x', 'a\nb'],
+    {opts: [['--foo', 'bar\nb az'], ['-x', 'a\nb']], pos: []}
   ]
 ].forEach(([name, args, expected, only]) => {
   const tFn = only ? test.only : test

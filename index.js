@@ -1,14 +1,14 @@
 const isShortFlag = v => /^-[^-]/.test(v)
-const isLongFlag = v => /^--/.test(v)
+const isLongFlag = v => /^--.+/.test(v)
 const isFlag = v => isShortFlag(v) || isLongFlag(v)
 const isPositional = v => !isFlag(v)
 
-const reduce = (ary, fn, initial) => {
-  let acc = initial
-  while (!acc.stop && acc.rest.length > 0) {
-    acc = fn(acc)
+const reduce = (fn, initial, array) => {
+  let acc = [initial, array]
+  while (acc[1] && acc[1].length > 0) {
+    acc = fn(acc[0], acc[1])
   }
-  return acc
+  return acc[0]
 }
 
 const stripHyphens = flag => flag.replace(/^--?/, '')
@@ -29,56 +29,53 @@ const findValueInFlag = flag => {
   return rest.length ? [ key, rest.join('=') ] : [ key ]
 }
 
-const onlyTheValuesThatShouldBeReturned = ({ opts, pos, rest }) => ({ opts, pos, rest })
-
 const parse = (args, options = {}) => {
   const isFlagOnly = chunk => options.flagOnly && options.flagOnly.includes(chunk)
+  const isEndMarker = v => options['--'] && v === '--'
+  const shouldNotUseValue = (lastFlag, tail) => (
+    isFlagOnly(lastFlag) ||
+    tail.length === 0 ||
+    isFlag(tail[0]) ||
+    isEndMarker(tail[0])
+  )
 
-  return onlyTheValuesThatShouldBeReturned(reduce(args, ({ opts, pos, rest }) => {
-    const [ head, ...tail ] = rest
+  return reduce(({ opts, pos }, remaining) => {
+    const [ head, ...tail ] = remaining
 
-
-    if (isPositional(head)) {
+    if (isEndMarker(head)) {
+      return [ { opts, pos, '--': tail } ]
+    } else if (isPositional(head)) {
       if (options.stopEarly) {
-        return {
-          opts,
-          pos,
-          rest: [ head, ...tail ],
-          stop: true
-        }
+        return [ { opts, pos, rest: [ head, ...tail ] } ]
       } else {
-        return {
-          opts,
-          rest: tail,
-          pos: [ ...pos, head ]
-        }
+        return [
+          { opts, pos: [ ...pos, head ] },
+          tail
+        ]
       }
     } else {
-      const [ justFlags, lastFlag ] = splitFlags(head)
-      const [ flag, flagValue ] = findValueInFlag(lastFlag)
+      const [ flag, flagValue ] = findValueInFlag(head)
+      const [ justFlags, lastFlag ] = splitFlags(flag)
       const optsWithFlags = [ ...opts, ...justFlags ]
-      if (flagValue !== undefined) {
-        return {
-          pos,
-          rest: tail,
-          opts: [ ...optsWithFlags, [ flag, flagValue ] ]
-        }
-      } else if (isFlagOnly(flag) || tail.length === 0 || isFlag(tail[0])) {
-        return {
-          pos,
-          rest: tail,
-          opts: [ ...optsWithFlags, flag ]
-        }
+      if (flagValue !== undefined && !isFlagOnly(lastFlag)) {
+        return [
+          { opts: [...optsWithFlags, [ lastFlag, flagValue ] ], pos },
+          tail
+        ]
+      } else if (shouldNotUseValue(lastFlag, tail)) {
+        return [
+          { opts: [ ...optsWithFlags, lastFlag ], pos },
+          tail
+        ]
       } else {
-        const [ b, ...newTail ] = tail
-        return {
-          pos,
-          rest: newTail,
-          opts: [ ...optsWithFlags, [ flag, b ] ]
-        }
+        const [ value, ...newTail ] = tail
+        return [
+          { opts: [ ...optsWithFlags, [ lastFlag, value ] ], pos },
+          newTail
+        ]
       }
     }
-  }, { opts: [], pos: [], rest: args }))
+  }, { opts: [], pos: [] }, args)
 }
 
 module.exports = parse
