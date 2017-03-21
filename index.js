@@ -4,11 +4,11 @@ const isFlag = v => isShortFlag(v) || isLongFlag(v)
 const isPositional = v => !isFlag(v)
 
 const reduce = (fn, initial, array) => {
-  let acc = [initial, array]
-  while (acc[1] && acc[1].length > 0) {
-    acc = fn(acc[0], acc[1])
+  let latest = { acc: initial, remaining: array }
+  while (latest.remaining && latest.remaining.length > 0) {
+    latest = fn(latest.acc, latest.remaining)
   }
-  return acc[0]
+  return latest.acc
 }
 
 const stripHyphens = flag => flag.replace(/^--?/, '')
@@ -38,6 +38,8 @@ const prepare = (options, result) => {
   }, {})
 }
 
+const nextStep = (acc, remaining) => ({ acc, remaining })
+
 const parse = (args, options = {}) => {
   const isFlagOnly = chunk => options.flagOnly && options.flagOnly.includes(chunk)
   const isEndMarker = v => options['--'] && v === '--'
@@ -52,36 +54,36 @@ const parse = (args, options = {}) => {
     const [ head, ...tail ] = remaining
 
     if (isEndMarker(head)) {
-      return [ { opts, pos, '--': tail } ]
+      return nextStep({ opts, pos, '--': tail })
     } else if (isPositional(head)) {
       if (options.stopEarly) {
-        return [ { opts, rest: [ head, ...tail ] } ]
+        return nextStep( { opts, rest: [ head, ...tail ] } )
       } else {
-        return [
+        return nextStep(
           { opts, pos: [ ...pos, head ] },
           tail
-        ]
+        )
       }
     } else {
       const [ flag, flagValue ] = findValueInFlag(head)
       const [ justFlags, lastFlag ] = splitFlags(flag)
       const optsWithFlags = [ ...opts, ...justFlags ]
       if (flagValue !== undefined && !isFlagOnly(lastFlag)) {
-        return [
+        return nextStep(
           { opts: [...optsWithFlags, [ lastFlag, flagValue ] ], pos },
           tail
-        ]
+        )
       } else if (shouldNotUseValue(lastFlag, tail)) {
-        return [
+        return nextStep(
           { opts: [ ...optsWithFlags, lastFlag ], pos },
           tail
-        ]
+        )
       } else {
         const [ value, ...newTail ] = tail
-        return [
+        return nextStep(
           { opts: [ ...optsWithFlags, [ lastFlag, value ] ], pos },
           newTail
-        ]
+        )
       }
     }
   }, { opts: [], pos: [], rest: [], '--': [] }, args)
