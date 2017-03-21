@@ -40,7 +40,7 @@ const parse = (args, options = {}) => {
     isEndMarker(tail[0])
   )
 
-  const reduce = ({ opts, pos }, remaining) => {
+  const reduce = ({ opts, pos, remaining }) => {
     if (!remaining || remaining.length === 0) {
       return { opts, pos }
     }
@@ -53,36 +53,40 @@ const parse = (args, options = {}) => {
       if (options.stopEarly) {
         return { opts, rest: [ head, ...tail ] }
       } else {
-        return reduce(
-          { opts, pos: [ ...pos, head ] },
-          tail
-        )
+        return reduce({
+          opts,
+          pos: [ ...pos, head ],
+          remaining: tail
+        })
       }
     } else {
       const [ flag, flagValue ] = findValueInFlag(head)
       const [ justFlags, lastFlag ] = splitFlags(flag)
       const optsWithFlags = [ ...opts, ...justFlags ]
       if (flagValue !== undefined && !isFlagOnly(lastFlag)) {
-        return reduce(
-          { opts: [...optsWithFlags, [ lastFlag, flagValue ] ], pos },
-          tail
-        )
+        return reduce({
+          opts: [...optsWithFlags, [ lastFlag, flagValue ] ],
+          pos,
+          remaining: tail
+        })
       } else if (shouldNotUseValue(lastFlag, tail)) {
-        return reduce(
-          { opts: [ ...optsWithFlags, lastFlag ], pos },
-          tail
-        )
+        return reduce({
+          opts: [ ...optsWithFlags, lastFlag ],
+          pos,
+          remaining: tail
+        })
       } else {
         const [ value, ...newTail ] = tail
-        return reduce(
-          { opts: [ ...optsWithFlags, [ lastFlag, value ] ], pos },
-          newTail
-        )
+        return reduce({
+          opts: [ ...optsWithFlags, [ lastFlag, value ] ],
+          pos,
+          remaining: newTail
+        })
       }
     }
   }
 
-  const result = reduce({ opts: [], pos: [] }, args)
+  const result = reduce({ opts: [], pos: [], remaining: args })
 
   return prepare(options, result)
 }
