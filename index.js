@@ -3,14 +3,6 @@ const isLongFlag = v => /^--.+/.test(v)
 const isFlag = v => isShortFlag(v) || isLongFlag(v)
 const isPositional = v => !isFlag(v)
 
-const reduce = (fn, initial, array) => {
-  let acc = [initial, array]
-  while (acc[1] && acc[1].length > 0) {
-    acc = fn(acc[0], acc[1])
-  }
-  return acc[0]
-}
-
 const stripHyphens = flag => flag.replace(/^--?/, '')
 
 // '-cats' -> ['-c', '-a', '-t', '-s']
@@ -48,43 +40,53 @@ const parse = (args, options = {}) => {
     isEndMarker(tail[0])
   )
 
-  const result = reduce(({ opts, pos }, remaining) => {
+  const reduce = ({ opts, pos, remaining }) => {
+    if (!remaining || remaining.length === 0) {
+      return { opts, pos }
+    }
+
     const [ head, ...tail ] = remaining
 
     if (isEndMarker(head)) {
-      return [ { opts, pos, '--': tail } ]
+      return { opts, pos, '--': tail }
     } else if (isPositional(head)) {
       if (options.stopEarly) {
-        return [ { opts, rest: [ head, ...tail ] } ]
+        return { opts, rest: [ head, ...tail ] }
       } else {
-        return [
-          { opts, pos: [ ...pos, head ] },
-          tail
-        ]
+        return reduce({
+          opts,
+          pos: [ ...pos, head ],
+          remaining: tail
+        })
       }
     } else {
       const [ flag, flagValue ] = findValueInFlag(head)
       const [ justFlags, lastFlag ] = splitFlags(flag)
       const optsWithFlags = [ ...opts, ...justFlags ]
       if (flagValue !== undefined && !isFlagOnly(lastFlag)) {
-        return [
-          { opts: [...optsWithFlags, [ lastFlag, flagValue ] ], pos },
-          tail
-        ]
+        return reduce({
+          opts: [...optsWithFlags, [ lastFlag, flagValue ] ],
+          pos,
+          remaining: tail
+        })
       } else if (shouldNotUseValue(lastFlag, tail)) {
-        return [
-          { opts: [ ...optsWithFlags, lastFlag ], pos },
-          tail
-        ]
+        return reduce({
+          opts: [ ...optsWithFlags, lastFlag ],
+          pos,
+          remaining: tail
+        })
       } else {
         const [ value, ...newTail ] = tail
-        return [
-          { opts: [ ...optsWithFlags, [ lastFlag, value ] ], pos },
-          newTail
-        ]
+        return reduce({
+          opts: [ ...optsWithFlags, [ lastFlag, value ] ],
+          pos,
+          remaining: newTail
+        })
       }
     }
-  }, { opts: [], pos: [], rest: [], '--': [] }, args)
+  }
+
+  const result = reduce({ opts: [], pos: [], remaining: args })
 
   return prepare(options, result)
 }
